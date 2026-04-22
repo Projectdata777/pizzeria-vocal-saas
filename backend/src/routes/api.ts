@@ -486,28 +486,25 @@ router.get('/setup-retell', async (req: Request, res: Response) => {
     const WS_URL = `wss://pizzeria-vocal-saas-backend.onrender.com/llm-websocket`;
     const WEBHOOK_URL = `${BASE}/webhook/retell`;
 
-    // Étape 1 : créer le Custom LLM avec le WebSocket URL
-    const llm = await (retell as any).customLlm.create({
-      llm_websocket_url: WS_URL,
-    });
-    const llmId = llm.llm_id;
+    const RETELL_KEY = config.retell.apiKey;
+    const headers = { 'Authorization': `Bearer ${RETELL_KEY}`, 'Content-Type': 'application/json' };
 
-    // Étape 2 : créer l'agent Retell (SDK v4)
-    const agent = await (retell.agent as any).create({
-      response_engine: {
-        type: 'custom-llm',
-        llm_id: llmId,
-      },
-      voice_id: '11labs-Adriana',
+    // Étape 1 : créer le Custom LLM
+    const llmRes = await axios.post('https://api.retellai.com/create-custom-llm', {
+      llm_websocket_url: WS_URL,
+    }, { headers });
+    const llmId = llmRes.data.llm_id;
+
+    // Étape 2 : créer l'agent
+    const agentRes = await axios.post('https://api.retellai.com/create-agent', {
+      response_engine: { type: 'custom-llm', llm_id: llmId },
+      voice_id: 'openai-Alloy',
       agent_name: 'Agent Pizzeria IA',
       language: 'fr-FR',
       webhook_url: WEBHOOK_URL,
-      responsiveness: 1,
-      interruption_sensitivity: 1,
-      enable_backchannel: true,
-    });
+    }, { headers });
 
-    const agentId = agent.agent_id;
+    const agentId = agentRes.data.agent_id;
 
     // Mettre à jour le premier restaurant en base avec l'agent_id
     const { data: restaurants } = await db.from('restaurants').select('id').limit(1);
