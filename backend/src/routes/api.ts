@@ -549,6 +549,40 @@ router.get('/saas/revenue', async (_req: Request, res: Response) => {
 });
 
 // ════════════════════════════════════════════════════════════
+//  SETUP PHONE (Twilio → Retell)
+// ════════════════════════════════════════════════════════════
+
+router.get('/setup-phone', async (req: Request, res: Response) => {
+  try {
+    if (req.query.secret !== 'PIZZERIA_SETUP_2024') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const AGENT_ID = 'agent_39579a2a3b3231a1c456ed991c';
+    const ZADARMA_NUMBER = '+33620845417';
+
+    // Importer le numéro Zadarma dans Retell
+    const phoneRes = await retell.phoneNumber.import({
+      phone_number: ZADARMA_NUMBER,
+      termination_uri: 'sip.zadarma.com',
+      inbound_agent_id: AGENT_ID,
+      nickname: 'Pizzeria IA — Zadarma FR',
+    } as any);
+
+    return res.json({
+      success: true,
+      phone_number: ZADARMA_NUMBER,
+      agent_id: AGENT_ID,
+      retell_data: phoneRes,
+      message: '✅ Numéro Zadarma importé dans Retell !',
+      next_step: 'Configurer Zadarma pour envoyer les appels entrants vers le SIP Retell',
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: String(err), details: err?.response?.data || err?.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
 //  SANTÉ + TEST
 // ════════════════════════════════════════════════════════════
 
