@@ -7,6 +7,7 @@ import { db } from '../db/client';
 import { sendMarketingSms } from '../services/NotificationService';
 import { TOUS_LES_MENUS, getMenuByType } from '../data/menus';
 import Retell from 'retell-sdk';
+import axios from 'axios';
 import config from '../config';
 
 const router = Router();
