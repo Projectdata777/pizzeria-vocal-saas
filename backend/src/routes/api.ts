@@ -624,19 +624,37 @@ router.get('/setup-zadarma', async (req: Request, res: Response) => {
       } as any);
     }
 
-    // 3. Configurer le routing Zadarma via leur API
-    const path = '/v1/direct_numbers/routing/';
-    const params: Record<string,string> = {
+    // 3. Mettre à jour le binding Retell → notre agent
+    try {
+      await retell.phoneNumber.update(ZADARMA_NUMBER, {
+        inbound_agent_id: AGENT_ID,
+      } as any);
+    } catch (updErr: any) {
+      console.error('Update Retell phone error:', updErr?.message);
+    }
+
+    // 4. Configurer le routing Zadarma — essai avec pbx/routing
+    const zdPath = '/v1/pbx/routing/';
+    const zdParams: Record<string,string> = {
       number: ZADARMA_NUMBER,
-      type: 'sip',
-      destination: 'sip.retellai.com',
+      routing_rule_id: '1',
+      action: 'sip',
+      action_data: 'sip.retellai.com',
     };
-    const auth = zadarmaAuth('POST', path, params);
+
+    // Auth corrigée : binary HMAC-SHA1 + base64
+    const zdAuth = (() => {
+      const sorted = Object.keys(zdParams).sort().map(k => `${k}=${zdParams[k]}`).join('&');
+      const md5 = crypto.createHash('md5').update(sorted).digest('hex');
+      const signStr = 'POST' + zdPath + sorted + md5;
+      const sig = crypto.createHmac('sha1', apiSecret).update(signStr).digest('base64');
+      return `${apiKey}:${sig}`;
+    })();
 
     let zadarmaResult: any = null;
     try {
-      const zdRes = await axios.post(`https://api.zadarma.com${path}`, new URLSearchParams(params), {
-        headers: { Authorization: auth, 'Content-Type': 'application/x-www-form-urlencoded' },
+      const zdRes = await axios.post(`https://api.zadarma.com${zdPath}`, new URLSearchParams(zdParams), {
+        headers: { Authorization: zdAuth, 'Content-Type': 'application/x-www-form-urlencoded' },
       });
       zadarmaResult = zdRes.data;
     } catch (zdErr: any) {
