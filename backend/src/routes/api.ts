@@ -473,6 +473,55 @@ router.get('/agents', async (_req: Request, res: Response) => {
 });
 
 // ════════════════════════════════════════════════════════════
+//  SETUP RETELL (one-time endpoint)
+// ════════════════════════════════════════════════════════════
+
+router.get('/setup-retell', async (req: Request, res: Response) => {
+  try {
+    if (req.query.secret !== 'PIZZERIA_SETUP_2024') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const BASE = 'https://pizzeria-vocal-saas-backend.onrender.com';
+    const WS_URL = `wss://pizzeria-vocal-saas-backend.onrender.com/llm-websocket`;
+    const WEBHOOK_URL = `${BASE}/webhook/retell`;
+
+    // Créer l'agent Retell avec Custom LLM WebSocket
+    const agent = await (retell.agent as any).create({
+      llm_websocket_url: WS_URL,
+      voice_id: '11labs-Adriana',
+      agent_name: 'Agent Pizzeria IA',
+      language: 'fr-FR',
+      webhook_url: WEBHOOK_URL,
+      responsiveness: 1,
+      interruption_sensitivity: 1,
+      enable_backchannel: true,
+    });
+
+    const agentId = agent.agent_id;
+
+    // Mettre à jour le premier restaurant en base avec l'agent_id
+    const { data: restaurants } = await db.from('restaurants').select('id').limit(1);
+    if (restaurants && restaurants.length > 0) {
+      await db.from('restaurants').update({
+        retell_agent_id: agentId,
+        updated_at: new Date().toISOString(),
+      }).eq('id', restaurants[0].id);
+    }
+
+    return res.json({
+      success: true,
+      agent_id: agentId,
+      ws_url: WS_URL,
+      webhook_url: WEBHOOK_URL,
+      message: '✅ Agent Retell créé et configuré avec succès !',
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: String(err), details: err?.message || '' });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
 //  KPIs REVENUS SAAS (pour Fery)
 // ════════════════════════════════════════════════════════════
 
