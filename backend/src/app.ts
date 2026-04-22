@@ -17,6 +17,9 @@ import apiRoutes from './routes/api';
 
 const app = express();
 
+// ─── Trust proxy (Render est derrière un reverse proxy) ───────────────────────
+app.set('trust proxy', 1);
+
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 app.use(cors({
   origin: (origin, cb) => {
