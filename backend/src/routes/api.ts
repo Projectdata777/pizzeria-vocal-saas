@@ -558,7 +558,7 @@ router.get('/setup-phone', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Forbidden' });
     }
 
-    const AGENT_ID = 'agent_39579a2a3b3231a1c456ed991c';
+    const AGENT_ID = 'agent_a69270d53cfb4f4742b2d96c88';
     const ZADARMA_NUMBER = '+33620845417';
 
     // Importer le numéro Zadarma dans Retell
@@ -596,7 +596,7 @@ router.get('/setup-zadarma', async (req: Request, res: Response) => {
     const apiKey = config.zadarma.apiKey;
     const apiSecret = config.zadarma.apiSecret;
     const ZADARMA_NUMBER = '+33189480917';
-    const AGENT_ID = 'agent_39579a2a3b3231a1c456ed991c';
+    const AGENT_ID = 'agent_a69270d53cfb4f4742b2d96c88';
 
     function zadarmaAuth(method: string, path: string, params: Record<string,string>): string {
       const sorted = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&');
