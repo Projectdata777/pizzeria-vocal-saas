@@ -289,6 +289,37 @@ export function setupLlmWebSocket(server: http.Server): void {
           });
 
           console.log(`📞 Appel ${ctx.callId} — Restaurant: ${ctx.restaurant?.name ?? 'inconnu'} — Client: ${ctx.callerPhone}`);
+
+          // ─── Message d'accueil initial (requis par Retell pour décrocher) ────
+          try {
+            const greetingResponse = await anthropic.messages.create({
+              model: config.anthropic.model,
+              max_tokens: 150,
+              messages: [{ role: 'user', content: 'Commence maintenant par le message d\'accueil.' }],
+              system: ctx.history[0].content,
+            });
+            const greetingText = greetingResponse.content[0].type === 'text'
+              ? greetingResponse.content[0].text
+              : 'Bonjour, bienvenue, que puis-je faire pour vous ?';
+            ctx.history.push({ role: 'assistant', content: greetingText });
+            ws.send(JSON.stringify({
+              response_type: 'response',
+              response_id: 1,
+              content: greetingText,
+              content_complete: true,
+              end_call: false,
+            }));
+            console.log(`🗣️  Accueil envoyé : ${greetingText.substring(0, 60)}…`);
+          } catch (e) {
+            console.error('❌ Erreur génération accueil:', e);
+            ws.send(JSON.stringify({
+              response_type: 'response',
+              response_id: 1,
+              content: 'Bonjour, je suis votre assistant, que puis-je faire pour vous ?',
+              content_complete: true,
+              end_call: false,
+            }));
+          }
           return;
         }
 
