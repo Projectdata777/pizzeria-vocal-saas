@@ -70,7 +70,7 @@ export default function MenusPage() {
                           <div key={ii} className="flex items-center justify-between text-sm">
                             <div>
                               <span className="text-gray-300">{item.nom as string}</span>
-                              {item.description && <span className="text-gray-600 text-xs ml-2">{item.description as string}</span>}
+                              {Boolean(item.description) && <span className="text-gray-600 text-xs ml-2">{item.description as string}</span>}
                             </div>
                             <span className="text-green-400 font-medium text-xs ml-4 flex-shrink-0">
                               {typeof item.prix === 'object'
