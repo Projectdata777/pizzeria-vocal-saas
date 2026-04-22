@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: pizzeria-vocal-saas-backend
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
