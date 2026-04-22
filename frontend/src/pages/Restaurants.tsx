@@ -9,7 +9,7 @@ export default function RestaurantsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: '', type: 'pizza', address: '', phone: '', owner_phone: '', owner_email: '' })
+  const [form, setForm] = useState<Partial<Restaurant>>({ name: '', type: 'pizza', address: '', phone: '', owner_phone: '', owner_email: '' })
   const [saving, setSaving] = useState(false)
 
   const load = () => {
