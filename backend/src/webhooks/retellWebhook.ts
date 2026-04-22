@@ -13,11 +13,19 @@ function verifySignature(req: Request): boolean {
   if (!config.security.webhookSecret || config.security.webhookSecret === 'changeme') return true;
   const sig = req.headers['x-retell-signature'] as string;
   if (!sig) return false;
-  const expected = crypto
-    .createHmac('sha256', config.security.webhookSecret)
-    .update(JSON.stringify(req.body))
-    .digest('hex');
-  return crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'));
+  try {
+    const expected = crypto
+      .createHmac('sha256', config.security.webhookSecret)
+      .update(JSON.stringify(req.body))
+      .digest('hex');
+    // Compare as hex strings — longueurs doivent être égales pour timingSafeEqual
+    const sigBuf = Buffer.from(sig, 'hex');
+    const expectedBuf = Buffer.from(expected, 'hex');
+    if (sigBuf.length !== expectedBuf.length) return false;
+    return crypto.timingSafeEqual(sigBuf, expectedBuf);
+  } catch {
+    return false;
+  }
 }
 
 router.post('/retell', async (req: Request, res: Response) => {
