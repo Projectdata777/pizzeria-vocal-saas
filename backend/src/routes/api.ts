@@ -486,9 +486,12 @@ router.get('/setup-retell', async (req: Request, res: Response) => {
     const WS_URL = `wss://pizzeria-vocal-saas-backend.onrender.com/llm-websocket`;
     const WEBHOOK_URL = `${BASE}/webhook/retell`;
 
-    // Créer l'agent Retell avec Custom LLM WebSocket
+    // Créer l'agent Retell avec Custom LLM WebSocket (SDK v4)
     const agent = await (retell.agent as any).create({
-      llm_websocket_url: WS_URL,
+      response_engine: {
+        type: 'custom_llm',
+        llm_websocket_url: WS_URL,
+      },
       voice_id: '11labs-Adriana',
       agent_name: 'Agent Pizzeria IA',
       language: 'fr-FR',
