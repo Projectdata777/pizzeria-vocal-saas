@@ -583,6 +583,92 @@ router.get('/setup-phone', async (req: Request, res: Response) => {
 });
 
 // ════════════════════════════════════════════════════════════
+//  SETUP ZADARMA → RETELL SIP routing
+// ════════════════════════════════════════════════════════════
+
+router.get('/setup-zadarma', async (req: Request, res: Response) => {
+  try {
+    if (req.query.secret !== 'PIZZERIA_SETUP_2024') {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const crypto = require('crypto');
+    const apiKey = config.zadarma.apiKey;
+    const apiSecret = config.zadarma.apiSecret;
+    const ZADARMA_NUMBER = '+33189480917';
+    const AGENT_ID = 'agent_39579a2a3b3231a1c456ed991c';
+
+    function zadarmaAuth(method: string, path: string, params: Record<string,string>): string {
+      const sorted = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&');
+      const md5 = crypto.createHash('md5').update(sorted).digest('hex');
+      const signStr = method.toUpperCase() + path + sorted + md5;
+      const hmac = crypto.createHmac('sha1', apiSecret).update(signStr).digest('base64');
+      return `${apiKey}:${hmac}`;
+    }
+
+    // 1. D'abord supprimer l'ancien import Retell (mauvais numéro +33620845417)
+    try {
+      await retell.phoneNumber.delete('+33620845417');
+    } catch (_) { /* ignore si inexistant */ }
+
+    // 2. Importer le bon numéro Zadarma dans Retell
+    let retellPhone: any;
+    try {
+      retellPhone = await retell.phoneNumber.retrieve(ZADARMA_NUMBER);
+    } catch (_) {
+      retellPhone = await retell.phoneNumber.import({
+        phone_number: ZADARMA_NUMBER,
+        termination_uri: 'sip.zadarma.com',
+        inbound_agent_id: AGENT_ID,
+        nickname: 'Pizzeria IA — Zadarma FR',
+      } as any);
+    }
+
+    // 3. Configurer le routing Zadarma via leur API
+    const path = '/v1/direct_numbers/routing/';
+    const params: Record<string,string> = {
+      number: ZADARMA_NUMBER,
+      type: 'sip',
+      destination: 'sip.retellai.com',
+    };
+    const auth = zadarmaAuth('POST', path, params);
+
+    let zadarmaResult: any = null;
+    try {
+      const zdRes = await axios.post(`https://api.zadarma.com${path}`, new URLSearchParams(params), {
+        headers: { Authorization: auth, 'Content-Type': 'application/x-www-form-urlencoded' },
+      });
+      zadarmaResult = zdRes.data;
+    } catch (zdErr: any) {
+      zadarmaResult = { error: zdErr?.response?.data || String(zdErr) };
+    }
+
+    // 4. Mettre à jour le restaurant en base avec le bon agent_id et numéro
+    const { data: restaurants } = await db.from('restaurants').select('id').limit(1);
+    if (restaurants && restaurants.length > 0) {
+      await db.from('restaurants').update({
+        retell_agent_id: AGENT_ID,
+        retell_phone: ZADARMA_NUMBER,
+        updated_at: new Date().toISOString(),
+      }).eq('id', restaurants[0].id);
+    }
+
+    return res.json({
+      success: true,
+      retell_number: ZADARMA_NUMBER,
+      retell_agent_id: AGENT_ID,
+      retell_phone_data: retellPhone,
+      zadarma_routing: zadarmaResult,
+      message: zadarmaResult?.error
+        ? '⚠️ Retell OK mais config Zadarma manuelle requise'
+        : '✅ Tout configuré ! Appelez le +33189480917 pour tester.',
+    });
+  } catch (err: any) {
+    return res.status(500).json({ error: String(err), details: err?.response?.data || err?.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
 //  SANTÉ + TEST
 // ════════════════════════════════════════════════════════════
 
