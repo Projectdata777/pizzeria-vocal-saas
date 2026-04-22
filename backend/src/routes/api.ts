@@ -687,6 +687,45 @@ router.get('/setup-zadarma', async (req: Request, res: Response) => {
 });
 
 // ════════════════════════════════════════════════════════════
+//  TEST ZADARMA CREDENTIALS
+// ════════════════════════════════════════════════════════════
+
+router.get('/test-zadarma', async (req: Request, res: Response) => {
+  try {
+    if (req.query.secret !== 'PIZZERIA_SETUP_2024') return res.status(403).json({ error: 'Forbidden' });
+    const crypto = require('crypto');
+    const apiKey = config.zadarma.apiKey;
+    const apiSecret = config.zadarma.apiSecret;
+
+    function zdSign(method: string, path: string, params: Record<string,string>) {
+      const sorted = Object.keys(params).sort().map(k => `${k}=${params[k]}`).join('&');
+      const md5 = crypto.createHash('md5').update(sorted).digest('hex');
+      const signStr = method.toLowerCase() + path + sorted + md5;
+      return `${apiKey}:${crypto.createHmac('sha1', apiSecret).update(signStr).digest('base64')}`;
+    }
+
+    // Test /v1/info/ — aucun paramètre
+    const infoPath = '/v1/info/';
+    const infoAuth = zdSign('GET', infoPath, {});
+    const infoRes = await axios.get(`https://api.zadarma.com${infoPath}`, {
+      headers: { Authorization: infoAuth }
+    });
+
+    // Lister les numéros directs
+    const numPath = '/v1/direct_numbers/';
+    const numAuth = zdSign('GET', numPath, {});
+    let numRes: any = null;
+    try {
+      numRes = (await axios.get(`https://api.zadarma.com${numPath}`, { headers: { Authorization: numAuth } })).data;
+    } catch (e: any) { numRes = { error: e?.response?.data || String(e) }; }
+
+    return res.json({ info: infoRes.data, numbers: numRes });
+  } catch (err: any) {
+    return res.status(500).json({ error: String(err), details: err?.response?.data || err?.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
 //  SANTÉ + TEST
 // ════════════════════════════════════════════════════════════
 
