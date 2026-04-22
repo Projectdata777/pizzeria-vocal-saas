@@ -487,25 +487,19 @@ router.get('/setup-retell', async (req: Request, res: Response) => {
     const WS_URL = `wss://pizzeria-vocal-saas-backend.onrender.com/llm-websocket`;
     const WEBHOOK_URL = `${BASE}/webhook/retell`;
 
-    const RETELL_KEY = config.retell.apiKey;
-    const headers = { 'Authorization': `Bearer ${RETELL_KEY}`, 'Content-Type': 'application/json' };
-
-    // Étape 1 : créer le Custom LLM
-    const llmRes = await axios.post('https://api.retellai.com/create-custom-llm', {
-      llm_websocket_url: WS_URL,
-    }, { headers });
-    const llmId = llmRes.data.llm_id;
-
-    // Étape 2 : créer l'agent
-    const agentRes = await axios.post('https://api.retellai.com/create-agent', {
-      response_engine: { type: 'custom-llm', llm_id: llmId },
-      voice_id: 'openai-Alloy',
+    // Créer l'agent avec Custom LLM WebSocket (format exact SDK v4)
+    const agentRes = await retell.agent.create({
+      response_engine: {
+        type: 'custom-llm',
+        llm_websocket_url: WS_URL,
+      } as any,
+      voice_id: '11labs-Adrian',
       agent_name: 'Agent Pizzeria IA',
       language: 'fr-FR',
       webhook_url: WEBHOOK_URL,
-    }, { headers });
+    });
 
-    const agentId = agentRes.data.agent_id;
+    const agentId = (agentRes as any).agent_id;
 
     // Mettre à jour le premier restaurant en base avec l'agent_id
     const { data: restaurants } = await db.from('restaurants').select('id').limit(1);
