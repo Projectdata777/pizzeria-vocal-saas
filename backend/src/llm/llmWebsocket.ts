@@ -266,6 +266,16 @@ export function setupLlmWebSocket(server: http.Server): void {
           ctx.callerPhone = msg.call.from_number || '';
           const toNumber = msg.call.to_number || '';
 
+          // ENVOI IMMÉDIAT — avant tout await pour éviter le timeout Retell (~1s)
+          ws.send(JSON.stringify({
+            response_type: 'response',
+            response_id: 1,
+            content: "Bonjour, Alex \u00e0 l'appareil, que puis-je faire pour vous ?",
+            content_complete: true,
+            end_call: false,
+          }));
+          console.log('[WS-GREETING-IMMEDIATE] Accueil statique envoy\u00e9 avant awaits DB');
+
           // Trouver le restaurant
           ctx.restaurant = await findRestaurantByPhone(toNumber);
 
