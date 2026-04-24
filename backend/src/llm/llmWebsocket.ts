@@ -296,7 +296,6 @@ async function finalizeCall(ctx: SessionContext): Promise<void> {
 export function setupLlmWebSocket(server: http.Server): void {
   const wss = new WebSocket.WebSocketServer({
     server,
-    path: '/llm-websocket',
     // FIX: Retell envoie Sec-WebSocket-Protocol: retell-llm-v2
     // Sans handleProtocols, le client Retell ferme la connexion (RFC 6455 §4.1)
     handleProtocols: (protocols, _req) => {
